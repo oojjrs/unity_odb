@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "com.oojjrs.odb": {
+      "version": "file:src",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    }
+  }
+}

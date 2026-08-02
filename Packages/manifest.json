@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "com.oojjrs.odb": "file:src"
+  }
+}

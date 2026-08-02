@@ -1,0 +1,15 @@
+{
+  "name": "com.oojjrs.odb",
+  "version": "1.0.0",
+  "displayName": "Odb",
+  "description": "Database wrapper for Unity.",
+  "unity": "6000.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oojjrs/unity_odb.git?path=/Packages/src"
+  },
+  "author": {
+    "name": "oojjrs",
+    "email": "oojjrs@gmail.com"
+  }
+}
