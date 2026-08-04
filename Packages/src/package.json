@@ -1,8 +1,8 @@
 {
   "name": "com.oojjrs.odb",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "displayName": "Odb",
-  "description": "Database wrapper for Unity.",
+  "description": "In-process indexed object database for Unity.",
   "unity": "6000.0",
   "repository": {
     "type": "git",

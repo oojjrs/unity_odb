@@ -1,0 +1,1908 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>UnityOdb 설계 초안</title>
+    <style>
+        :root {
+            --background: #f4f6f8;
+            --surface: #ffffff;
+            --surface-muted: #f8fafc;
+            --border: #dce2e8;
+            --border-strong: #c4ced8;
+            --text: #15202b;
+            --text-muted: #5f6f7d;
+            --header: #101820;
+            --header-soft: #1a2632;
+            --nav: #18232e;
+            --nav-hover: #243646;
+            --accent: #21c08b;
+            --accent-strong: #0f8d65;
+            --accent-soft: #ddf7ee;
+            --blue: #3988ff;
+            --blue-soft: #e9f2ff;
+            --warning: #d68400;
+            --warning-soft: #fff4dc;
+            --danger: #c94848;
+            --danger-soft: #ffebeb;
+            --code: #101922;
+            --shadow: 0 12px 30px rgba(18, 31, 43, 0.08);
+            --header-height: 76px;
+            --nav-width: 270px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            background: var(--background);
+            color: var(--text);
+            font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+            line-height: 1.62;
+        }
+
+        a {
+            color: inherit;
+        }
+
+        code,
+        pre {
+            font-family: Consolas, "Cascadia Code", monospace;
+        }
+
+        .top-header {
+            position: fixed;
+            z-index: 30;
+            top: 0;
+            right: 0;
+            left: 0;
+            min-height: var(--header-height);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+            background: linear-gradient(115deg, var(--header) 0%, var(--header-soft) 100%);
+            color: #ffffff;
+        }
+
+        .header-inner {
+            display: flex;
+            min-height: var(--header-height);
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+            padding: 13px 24px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+        }
+
+        .brand-mark {
+            display: grid;
+            width: 45px;
+            height: 45px;
+            flex: 0 0 auto;
+            place-items: center;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 13px;
+            background: rgba(33, 192, 139, 0.16);
+            color: #72e6bf;
+            font-size: 17px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+        }
+
+        .brand-copy {
+            min-width: 0;
+        }
+
+        .brand-copy strong {
+            display: block;
+            overflow: hidden;
+            font-size: 18px;
+            letter-spacing: -0.02em;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .brand-copy span {
+            display: block;
+            color: #aebdca;
+            font-size: 12px;
+        }
+
+        .header-status {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .status-chip {
+            padding: 6px 10px;
+            border: 1px solid rgba(255, 255, 255, 0.13);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.07);
+            color: #dce7ef;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .status-chip.accent {
+            border-color: rgba(76, 225, 175, 0.3);
+            background: rgba(33, 192, 139, 0.15);
+            color: #78e8c2;
+        }
+
+        .side-nav {
+            position: fixed;
+            z-index: 20;
+            top: var(--header-height);
+            bottom: 0;
+            left: 0;
+            width: var(--nav-width);
+            overflow-y: auto;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            background: var(--nav);
+            color: #d2dde6;
+            padding: 20px 16px 36px;
+        }
+
+        .nav-group + .nav-group {
+            margin-top: 22px;
+        }
+
+        .nav-group-title {
+            margin: 0 9px 7px;
+            color: #7f94a5;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .nav-link {
+            display: block;
+            margin: 2px 0;
+            padding: 8px 10px;
+            border-radius: 8px;
+            color: #bdcbd6;
+            font-size: 13px;
+            text-decoration: none;
+            transition: background 120ms ease, color 120ms ease;
+        }
+
+        .nav-link:hover {
+            background: var(--nav-hover);
+            color: #ffffff;
+        }
+
+        .nav-link.active {
+            background: rgba(33, 192, 139, 0.16);
+            color: #75e4be;
+            font-weight: 700;
+        }
+
+        main {
+            max-width: 1320px;
+            margin-left: var(--nav-width);
+            padding: calc(var(--header-height) + 30px) 40px 72px;
+        }
+
+        .identity-panel {
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 24px;
+            padding: 30px;
+            border: 1px solid #cbd6df;
+            border-radius: 18px;
+            background: linear-gradient(135deg, #ffffff 0%, #edf7f4 100%);
+            box-shadow: var(--shadow);
+        }
+
+        .identity-panel::after {
+            position: absolute;
+            top: -70px;
+            right: -35px;
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: rgba(33, 192, 139, 0.1);
+            content: "";
+        }
+
+        .eyebrow {
+            margin: 0 0 8px;
+            color: var(--accent-strong);
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        h1,
+        h2,
+        h3,
+        p {
+            margin-top: 0;
+        }
+
+        h1 {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin-bottom: 12px;
+            font-size: clamp(30px, 4vw, 48px);
+            line-height: 1.15;
+            letter-spacing: -0.045em;
+        }
+
+        .identity-copy {
+            position: relative;
+            z-index: 1;
+            max-width: 850px;
+            margin-bottom: 22px;
+            color: #465969;
+            font-size: 16px;
+        }
+
+        .fact-grid {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .fact {
+            padding: 13px 14px;
+            border: 1px solid rgba(111, 137, 151, 0.25);
+            border-radius: 11px;
+            background: rgba(255, 255, 255, 0.72);
+        }
+
+        .fact span {
+            display: block;
+            color: var(--text-muted);
+            font-size: 11px;
+        }
+
+        .fact strong {
+            display: block;
+            margin-top: 2px;
+            font-size: 14px;
+        }
+
+        .section-group {
+            margin-top: 25px;
+        }
+
+        .section-group-heading {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 18px;
+            margin-bottom: 10px;
+            padding: 0 3px;
+        }
+
+        .section-group-heading h2 {
+            margin-bottom: 0;
+            font-size: 20px;
+            letter-spacing: -0.025em;
+        }
+
+        .section-group-heading p {
+            margin-bottom: 0;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .section-group-body {
+            display: grid;
+            gap: 10px;
+        }
+
+        details {
+            scroll-margin-top: calc(var(--header-height) + 18px);
+            border: 1px solid var(--border);
+            border-radius: 13px;
+            background: var(--surface);
+            box-shadow: 0 4px 16px rgba(21, 32, 43, 0.035);
+        }
+
+        details[open] {
+            border-color: var(--border-strong);
+        }
+
+        summary {
+            display: flex;
+            min-height: 56px;
+            cursor: pointer;
+            list-style: none;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            font-weight: 750;
+            letter-spacing: -0.015em;
+        }
+
+        summary::-webkit-details-marker {
+            display: none;
+        }
+
+        summary::before {
+            display: grid;
+            width: 24px;
+            height: 24px;
+            flex: 0 0 auto;
+            place-items: center;
+            border-radius: 7px;
+            background: var(--surface-muted);
+            color: var(--accent-strong);
+            content: "+";
+            font-size: 16px;
+            line-height: 1;
+        }
+
+        details[open] summary::before {
+            background: var(--accent-soft);
+            content: "−";
+        }
+
+        .summary-note {
+            margin-left: auto;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .details-body {
+            padding: 0 18px 20px 54px;
+            color: #344657;
+        }
+
+        .details-body > :last-child {
+            margin-bottom: 0;
+        }
+
+        .term {
+            position: relative;
+            display: inline-grid;
+            width: 17px;
+            height: 17px;
+            margin-left: 3px;
+            cursor: help;
+            place-items: center;
+            border: 1px solid #9cb1c0;
+            border-radius: 50%;
+            color: #5b7181;
+            font-size: 10px;
+            font-weight: 800;
+            vertical-align: 1px;
+        }
+
+        .term:hover::after,
+        .term:focus::after {
+            position: absolute;
+            z-index: 50;
+            bottom: 24px;
+            left: 50%;
+            width: 250px;
+            padding: 9px 11px;
+            transform: translateX(-50%);
+            border-radius: 8px;
+            background: #101820;
+            color: #ffffff;
+            content: attr(data-tooltip);
+            font-size: 11px;
+            font-weight: 500;
+            line-height: 1.5;
+            box-shadow: var(--shadow);
+        }
+
+        .pill-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+            margin: 12px 0 16px;
+        }
+
+        .pill {
+            padding: 5px 9px;
+            border: 1px solid #c7ddd5;
+            border-radius: 999px;
+            background: var(--accent-soft);
+            color: #176a50;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin: 14px 0;
+        }
+
+        .card {
+            min-width: 0;
+            padding: 14px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface-muted);
+        }
+
+        .card strong {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--text);
+            font-size: 13px;
+        }
+
+        .card p {
+            margin-bottom: 0;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .flow {
+            display: grid;
+            grid-template-columns: minmax(150px, 1fr) 34px minmax(190px, 1.2fr) 34px minmax(150px, 1fr);
+            align-items: stretch;
+            gap: 8px;
+            margin: 16px 0;
+        }
+
+        .flow-node {
+            display: flex;
+            min-height: 92px;
+            flex-direction: column;
+            justify-content: center;
+            padding: 13px;
+            border: 1px solid #cdd9e2;
+            border-radius: 10px;
+            background: #ffffff;
+            text-align: center;
+        }
+
+        .flow-node.core {
+            border-color: #79cdb1;
+            background: var(--accent-soft);
+        }
+
+        .flow-node strong {
+            font-size: 13px;
+        }
+
+        .flow-node span {
+            margin-top: 4px;
+            color: var(--text-muted);
+            font-size: 11px;
+        }
+
+        .flow-arrow {
+            display: grid;
+            place-items: center;
+            color: #8296a5;
+            font-size: 21px;
+            font-weight: 800;
+        }
+
+        .callout {
+            margin: 14px 0;
+            padding: 12px 14px;
+            border-left: 4px solid var(--blue);
+            border-radius: 8px;
+            background: var(--blue-soft);
+            color: #294a73;
+            font-size: 12px;
+        }
+
+        .callout.warning {
+            border-left-color: var(--warning);
+            background: var(--warning-soft);
+            color: #7b5009;
+        }
+
+        .callout.danger {
+            border-left-color: var(--danger);
+            background: var(--danger-soft);
+            color: #7e3333;
+        }
+
+        ul.compact {
+            margin: 10px 0 15px;
+            padding-left: 20px;
+        }
+
+        ul.compact li + li {
+            margin-top: 4px;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+            margin: 14px 0;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #ffffff;
+            font-size: 12px;
+        }
+
+        th,
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            background: #f1f5f7;
+            color: #405464;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        tr:last-child td {
+            border-bottom: 0;
+        }
+
+        pre {
+            overflow-x: auto;
+            margin: 14px 0;
+            padding: 15px 16px;
+            border-radius: 10px;
+            background: var(--code);
+            color: #dbe8f1;
+            font-size: 12px;
+            line-height: 1.58;
+            tab-size: 4;
+        }
+
+        .code-comment {
+            color: #7e9aaa;
+        }
+
+        .decision {
+            display: grid;
+            grid-template-columns: 115px 1fr;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .decision:last-child {
+            border-bottom: 0;
+        }
+
+        .decision-state {
+            align-self: start;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: var(--accent-soft);
+            color: #176a50;
+            font-size: 10px;
+            font-weight: 800;
+            text-align: center;
+        }
+
+        .decision-state.open {
+            background: var(--warning-soft);
+            color: #815500;
+        }
+
+        .decision-state.defer {
+            background: #edf0f3;
+            color: #60717f;
+        }
+
+        .decision-copy strong {
+            display: block;
+            margin-bottom: 2px;
+            color: var(--text);
+            font-size: 12px;
+        }
+
+        .decision-copy span {
+            color: var(--text-muted);
+            font-size: 11px;
+        }
+
+        .footer-note {
+            margin-top: 26px;
+            padding: 15px 18px;
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            background: #eef2f5;
+            color: var(--text-muted);
+            font-size: 11px;
+            text-align: center;
+        }
+
+        @media (max-width: 1040px) {
+            .fact-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .card-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 820px) {
+            :root {
+                --header-height: 94px;
+            }
+
+            .header-inner {
+                align-items: flex-start;
+                padding: 12px 16px;
+            }
+
+            .header-status {
+                max-width: 150px;
+            }
+
+            .side-nav {
+                position: sticky;
+                z-index: 10;
+                top: var(--header-height);
+                width: auto;
+                height: auto;
+                max-height: 42vh;
+                padding: 12px;
+                border-right: 0;
+                border-bottom: 1px solid #0e171f;
+            }
+
+            .nav-group {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px;
+            }
+
+            .nav-group + .nav-group {
+                margin-top: 8px;
+            }
+
+            .nav-group-title {
+                width: 100%;
+                margin: 0 5px 2px;
+            }
+
+            .nav-link {
+                display: inline-block;
+                margin: 0;
+                padding: 6px 8px;
+                font-size: 11px;
+            }
+
+            main {
+                margin-left: 0;
+                padding: 22px 15px 52px;
+            }
+
+            .identity-panel {
+                padding: 22px;
+            }
+
+            .flow {
+                grid-template-columns: 1fr;
+            }
+
+            .flow-arrow {
+                min-height: 22px;
+                transform: rotate(90deg);
+            }
+        }
+
+        @media (max-width: 560px) {
+            :root {
+                --header-height: 108px;
+            }
+
+            .brand-mark {
+                width: 39px;
+                height: 39px;
+                border-radius: 10px;
+            }
+
+            .brand-copy strong {
+                font-size: 15px;
+            }
+
+            .brand-copy span {
+                max-width: 210px;
+                white-space: normal;
+            }
+
+            .header-status {
+                display: none;
+            }
+
+            .fact-grid,
+            .card-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .section-group-heading {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 2px;
+            }
+
+            summary {
+                align-items: flex-start;
+                padding: 13px 14px;
+            }
+
+            .summary-note {
+                display: none;
+            }
+
+            .details-body {
+                padding: 0 14px 17px;
+            }
+
+            .decision {
+                grid-template-columns: 88px 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="top-header">
+        <div class="header-inner">
+            <div class="brand">
+                <div class="brand-mark" aria-hidden="true">ODB</div>
+                <div class="brand-copy">
+                    <strong>UnityOdb</strong>
+                    <span>메모리 상주형 인덱스 오브젝트 데이터베이스</span>
+                </div>
+            </div>
+            <div class="header-status" aria-label="문서 상태">
+                <span class="status-chip accent">설계 + 구현 초안</span>
+                <span class="status-chip">Unity 6000.4</span>
+                <span class="status-chip">Core Runtime MVP</span>
+            </div>
+        </div>
+    </header>
+
+    <nav class="side-nav" aria-label="설계 문서 목차">
+        <div class="nav-group">
+            <p class="nav-group-title">Direction</p>
+            <a class="nav-link active" href="#overview">제품 정의</a>
+            <a class="nav-link" href="#boundary">책임 경계</a>
+            <a class="nav-link" href="#usage-lessons">실사용에서 얻은 기준</a>
+        </div>
+        <div class="nav-group">
+            <p class="nav-group-title">Runtime</p>
+            <a class="nav-link" href="#model">사전 선언 모델</a>
+            <a class="nav-link" href="#query">조회와 인덱스</a>
+            <a class="nav-link" href="#mutation">변경 정합성</a>
+            <a class="nav-link" href="#memory">메모리 전략</a>
+        </div>
+        <div class="nav-group">
+            <p class="nav-group-title">Lifecycle</p>
+            <a class="nav-link" href="#async-lifecycle">비동기 생명주기</a>
+            <a class="nav-link" href="#snapshot">전체 스냅샷</a>
+            <a class="nav-link" href="#partial-export">부분 Export</a>
+            <a class="nav-link" href="#utf8-format">표준 직렬화</a>
+        </div>
+        <div class="nav-group">
+            <p class="nav-group-title">Contract</p>
+            <a class="nav-link" href="#api-draft">API 방향</a>
+            <a class="nav-link" href="#performance">성능 계약</a>
+            <a class="nav-link" href="#validation">검증 기준</a>
+        </div>
+        <div class="nav-group">
+            <p class="nav-group-title">Decisions</p>
+            <a class="nav-link" href="#decision-status">확정 사항</a>
+            <a class="nav-link" href="#open-items">미확정 사항</a>
+            <a class="nav-link" href="#implementation-phases">구현 순서</a>
+        </div>
+    </nav>
+
+    <main>
+        <section class="identity-panel" aria-labelledby="page-title">
+            <p class="eyebrow">In-process · Memory-resident · Indexed</p>
+            <h1 id="page-title">저장소가 아니라 빠른 런타임 데이터 엔진</h1>
+            <p class="identity-copy">
+                UnityOdb는 프로세스 메모리 안에서 타입이 선언된 엔터티를 조회·변경하고 인덱싱한다.
+                파일, Steam Cloud, 모바일 Cloud 같은 물리 저장소는 호출자가 선택하며 UnityOdb는
+                초기 적재와 전체·부분 추출에 필요한 경계만 제공한다.
+            </p>
+            <div class="fact-grid">
+                <div class="fact">
+                    <span>예상 데이터 규모</span>
+                    <strong>수천~수만 엔터티</strong>
+                </div>
+                <div class="fact">
+                    <span>우선순위</span>
+                    <strong>메모리보다 조회 속도</strong>
+                </div>
+                <div class="fact">
+                    <span>영속화</span>
+                    <strong>호출자 책임</strong>
+                </div>
+                <div class="fact">
+                    <span>기본 직렬화</span>
+                    <strong>XML · JSON</strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="section-group" aria-labelledby="direction-heading">
+            <div class="section-group-heading">
+                <h2 id="direction-heading">방향</h2>
+                <p>무엇을 만들고 무엇을 만들지 않는가</p>
+            </div>
+            <div class="section-group-body">
+                <details id="overview" open>
+                    <summary>
+                        제품 정의와 설계 축
+                        <span class="summary-note">현재 합의</span>
+                    </summary>
+                    <div class="details-body">
+                        <p>
+                            UnityOdb의 정체는 EF Core 복제품이나 SQLite wrapper가 아니라,
+                            <strong>EF Core와 비슷한 선언 경험을 가진 메모리 상주형 indexed object store</strong>다.
+                        </p>
+                        <div class="pill-row">
+                            <span class="pill">사전 선언 스키마</span>
+                            <span class="pill">직접 인덱스 fast path</span>
+                            <span class="pill">표준 LINQ 병행</span>
+                            <span class="pill">UTF-8 snapshot</span>
+                            <span class="pill">호출자 주도 부분 Export</span>
+                            <span class="pill">Async persistence lifecycle</span>
+                        </div>
+                        <div class="card-grid">
+                            <div class="card">
+                                <strong>런타임 엔진</strong>
+                                <p>테이블, 키, 인덱스, 조회, 변경을 프로세스 메모리에서 관리한다.</p>
+                            </div>
+                            <div class="card">
+                                <strong>명시적 계약</strong>
+                                <p>엔터티, 키, 인덱스, 용량 힌트를 Context에서 사전에 선언한다.</p>
+                            </div>
+                            <div class="card">
+                                <strong>호출자 주도 저장</strong>
+                                <p>UnityOdb가 기록할 표준 <code>Stream</code>과 게시 방법은 호출자가 결정한다.</p>
+                            </div>
+                        </div>
+                        <div class="callout">
+                            현재 저장소에는 선언형 Context·Set, Primary·Hash·Unique index, 즉시 단건 변경,
+                            표준 LINQ 열거, async initialize·export, BCL 기반 XML·JSON snapshot까지 구현되어 있다.
+                            단일 스레드에서 Dictionary처럼 직접 사용하며 transaction·revision·change tracking은 제공하지 않는다.
+                        </div>
+                        <h3>비목표</h3>
+                        <ul class="compact">
+                            <li>SQL script 문법, SQL 변환기, 관계형 DB provider</li>
+                            <li>EF Core의 change tracker, proxy, lazy loading, <code>Include</code>, <code>SaveChanges</code> 복제</li>
+                            <li>네트워크 서버, 계정 인증, Steam 또는 파일 시스템 통합</li>
+                            <li>디스크 paging, eviction, 압축 중심 자료구조, 초대형 데이터베이스</li>
+                            <li>XML 표준 인코딩 감지 밖의 레거시 코드페이지 adapter</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details id="boundary">
+                    <summary>
+                        책임 경계
+                        <span class="summary-note">Core와 저장소 분리</span>
+                    </summary>
+                    <div class="details-body">
+                        <div class="flow" aria-label="호출자와 UnityOdb의 책임 흐름">
+                            <div class="flow-node">
+                                <strong>Initialization Stream</strong>
+                                <span>파일 · Steam · 메모리 · 테스트 fixture</span>
+                            </div>
+                            <div class="flow-arrow" aria-hidden="true">→</div>
+                            <div class="flow-node core">
+                                <strong>UnityOdb</strong>
+                                <span>Tables · Indexes · Query · Mutation</span>
+                            </div>
+                            <div class="flow-arrow" aria-hidden="true">→</div>
+                            <div class="flow-node">
+                                <strong>Export Stream</strong>
+                                <span>파일 · 메모리 · 플랫폼 adapter</span>
+                            </div>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>영역</th>
+                                        <th>UnityOdb</th>
+                                        <th>호출자</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>데이터 모델</td>
+                                        <td>엔터티, 키, 인덱스 메타데이터와 런타임 상태</td>
+                                        <td>프로젝트별 Context와 엔터티 선언</td>
+                                    </tr>
+                                    <tr>
+                                        <td>저장 포맷</td>
+                                        <td>표준 XML·JSON 기반 전체 export와 사용자 정의 부분 export 경계</td>
+                                        <td>어떤 입력·출력 <code>Stream</code>을 연결할지 결정</td>
+                                    </tr>
+                                    <tr>
+                                        <td>물리 저장</td>
+                                        <td>알지 못함</td>
+                                        <td>파일 경로, Steam API, 재시도, 백업, 동기화</td>
+                                    </tr>
+                                    <tr>
+                                        <td>저장 범위</td>
+                                        <td>요청된 entity의 live read-only collection 제공</td>
+                                        <td>Set 선택, row filter, 변경 추적, Local·Cloud 선택, 병합, 재시도</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p>
+                            Steam Cloud와 같은 플랫폼 기능은 UnityOdb가 의존하지 않는다. 호출자 쪽 adapter가 callback 기반 SDK와
+                            읽기·쓰기 가능한 <code>Stream</code> 사이를 연결한다.
+                        </p>
+                    </div>
+                </details>
+
+                <details id="usage-lessons">
+                    <summary>
+                        실제 서버 사용 코드에서 얻은 기준
+                        <span class="summary-note">사용감만 전이</span>
+                    </summary>
+                    <div class="details-body">
+                        <p>
+                            서로 다른 세대의 ASP.NET·EF Core 서버 호출부를 비교했다. 구현 구조를 복제하지 않고,
+                            여러 프로젝트에서 반복해서 나타난 사용 습관과 병목만 UnityOdb의 판단 근거로 삼는다.
+                        </p>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>반복된 실사용</th>
+                                        <th>UnityOdb에 가져올 것</th>
+                                        <th>가져오지 않을 것</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>타입이 잡힌 Context와 엔터티별 진입점</td>
+                                        <td><code>GameOdbContext.Items</code> 같은 발견 가능한 typed set</td>
+                                        <td>수백 개 mapper를 모은 거대 service locator</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>SelectBy...</code> 형태의 이름 있는 조회</td>
+                                        <td>호출자가 얹을 수 있는 작은 query facade와 index-first 결과 view</td>
+                                        <td>모든 LINQ가 자동 최적화된다는 보장</td>
+                                    </tr>
+                                    <tr>
+                                        <td>실제 조건에 맞춘 단일·복합·고유 인덱스</td>
+                                        <td>선언 순서를 보존하는 composite index와 unique 제약</td>
+                                        <td>사용하지 않는 인덱스와 단건 의미만 가진 비고유 조회</td>
+                                    </tr>
+                                    <tr>
+                                        <td>요청 범위 Context 수명과 service 경계</td>
+                                        <td>가져오지 않음</td>
+                                        <td>필요하다면 ODB 밖에서 호출 순서와 복구 정책 구성</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Async query·save와 CancellationToken</td>
+                                        <td>외부 I/O 경계 끝까지 전달되는 취소</td>
+                                        <td>기다릴 일이 없는 memory CRUD의 가짜 async</td>
+                                    </tr>
+                                    <tr>
+                                        <td>저장 record와 domain projection의 분리</td>
+                                        <td>호출자 projection과 명시적 value codec 확장점</td>
+                                        <td>tracking proxy, navigation graph, provider 변환 계층</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="callout">
+                            EF의 <code>DbContext</code>는 짧은 unit of work지만 <code>OdbContext</code>는 활성 데이터와 인덱스를
+                            소유하는 장수명 데이터베이스다. 변경은 Dictionary처럼 즉시 반영되며 <code>SaveChanges</code>,
+                            transaction, 격리 수준, write batch를 제공하지 않는다.
+                        </div>
+                        <p>
+                            실제 호출부에서는 임의 LINQ보다 도메인 이름을 가진 조회가 훨씬 자주 반복됐다. Core는 typed set과
+                            index view를 제공하고, 게임별 <code>FindAllByOwnerId</code> 같은 facade는 호출자가 작고 모듈식으로 구성한다.
+                        </p>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <section class="section-group" aria-labelledby="runtime-heading">
+            <div class="section-group-heading">
+                <h2 id="runtime-heading">런타임 모델</h2>
+                <p>선언, 조회, 변경, 메모리 배치</p>
+            </div>
+            <div class="section-group-body">
+                <details id="model">
+                    <summary>
+                        사전 선언 모델
+                        <span class="summary-note">Context별 1회 구성</span>
+                    </summary>
+                    <div class="details-body">
+                        <p>
+                            General하다는 의미는 런타임에 임의 타입을 자동 추론한다는 뜻이 아니다.
+                            각 프로젝트가 자기 Context에서 테이블과 인덱스를 명시할 수 있다는 뜻이다.
+                        </p>
+                        <pre><code>public sealed class GameOdbContext : OdbContext
+{
+    public OdbSet&lt;Item, ItemId&gt; Items =&gt; GetSet&lt;Item, ItemId&gt;();
+
+    protected override void OnModelCreating(OdbModelBuilder modelBuilder)
+    {
+        modelBuilder.SetSchemaVersion(3);
+        modelBuilder.AddEntity&lt;Item, ItemId&gt;("Item", item =&gt; item.Id)
+            .SetCapacityHint(8192)
+            .AddIndex(item =&gt; item.OwnerId)
+            .AddUniqueIndex(item =&gt; item.Code, StringComparer.Ordinal);
+    }
+}</code></pre>
+                        <p>
+                            Context 모델은 최초 접근 때 한 번 검증·동결하며 선언된 모든 Set과 Index를 함께 생성한다.
+                            Definition과 runtime Index 타입은 내부 구현이므로 호출자가 보관하지 않는다.
+                        </p>
+                        <ul class="compact">
+                            <li>논리적으로 하나여야 하는 값은 단건 조회 관례가 아니라 <code>AddUniqueIndex</code>로 강제한다.</li>
+                            <li>Secondary index selector는 읽을 수 있는 직접 property만 받는다. Primary key selector는 일반 함수로 선언한다.</li>
+                            <li>기본 XML·JSON이 지원하지 않는 값이나 별도 포맷은 사용자 정의 importer·exporter에서 처리한다.</li>
+                            <li>Context는 typed facade로 유지하고 모델 선언은 일반 메서드나 작은 configuration module로 분리할 수 있다.</li>
+                        </ul>
+                        <div class="flow" aria-label="Context 초기 구성 순서">
+                            <div class="flow-node">
+                                <strong>Declare</strong>
+                                <span>Entity · Key · Index · Capacity</span>
+                            </div>
+                            <div class="flow-arrow" aria-hidden="true">→</div>
+                            <div class="flow-node core">
+                                <strong>Validate &amp; Freeze</strong>
+                                <span>중복과 호환성 검증</span>
+                            </div>
+                            <div class="flow-arrow" aria-hidden="true">→</div>
+                            <div class="flow-node">
+                                <strong>Build</strong>
+                                <span>Table과 Index 생성</span>
+                            </div>
+                        </div>
+                        <div class="callout">
+                            첫 prototype은 primary fast path와 AOT generic 구성을 우선해
+                            <code>OdbSet&lt;TEntity, TKey&gt;</code> 형태로 확정했다.
+                        </div>
+                    </div>
+                </details>
+
+                <details id="query">
+                    <summary>
+                        조회와 인덱스
+                        <span class="summary-note">LINQ 재구현 안 함</span>
+                    </summary>
+                    <div class="details-body">
+                        <p>
+                            .NET의 LINQ 연산을 다시 만들지 않는다. <code>OdbSet</code>에 표준 LINQ를 바로 적용하면 전체 Set을 순회한다.
+                            고유 값은 <code>TryFindBy</code>로 한 건을 찾고, 비고유 값은 <code>FindBy</code>로 bucket view를 얻은 뒤 표준 LINQ를 적용한다.
+                        </p>
+                        <pre><code>if (db.Items.TryFind(itemId, out var item))
+    Use(item);
+
+if (db.Items.TryFindBy(item =&gt; item.Code, itemCode, out var codedItem))
+    Use(codedItem);
+
+var ownedItems = db.Items.FindBy(item =&gt; item.OwnerId, ownerId);
+
+var visibleItems = ownedItems
+    .Where(item =&gt; item.IsVisible)
+    .OrderByDescending(item =&gt; item.Level);</code></pre>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>인덱스</th>
+                                        <th>대표 구조</th>
+                                        <th>용도</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Primary</td>
+                                        <td>Key → Entity</td>
+                                        <td><code>TryFind</code>, 식별자 조회</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Unique Hash</td>
+                                        <td>IndexKey → Entity</td>
+                                        <td>계정 ID 등 고유 보조 키</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Hash</td>
+                                        <td>IndexKey → Entity bucket</td>
+                                        <td>Owner, Category 등 equality 조건</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Composite Hash</td>
+                                        <td>(Key A, Key B, ...) → Entity bucket</td>
+                                        <td>Owner + DataKey 등 반복되는 다중 equality 조건</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Ordered</td>
+                                        <td>정렬 Key → Entity bucket</td>
+                                        <td>범위 검색과 정렬 순회</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p>
+                            제한된 <code>IQueryable</code> provider와 prepared query는 직접 인덱스 API의 정확성·성능이 확인된 뒤
+                            선택적으로 추가한다. 지원하지 않는 표현식을 몰래 전체 순회시키지 않고 진단하거나 명시적으로
+                            <code>AsEnumerable()</code> 경계를 요구한다.
+                        </p>
+                        <div class="callout">
+                            호출자는 definition field나 runtime Index property를 만들지 않는다. Selector 식은 등록된 property를 찾는 데만 쓰고,
+                            실제 데이터 조회는 해당 Dictionary·bucket에서 수행한다. 식 트리 생성 비용까지 없애야 하는 반복 hot path는
+                            benchmark 뒤 prepared query나 source generation을 별도 검토한다.
+                        </div>
+                    </div>
+                </details>
+
+                <details id="mutation">
+                    <summary>
+                        변경과 인덱스 정합성
+                        <span class="summary-note">Change tracker 없음</span>
+                    </summary>
+                    <div class="details-body">
+                        <p>
+                            저장된 엔터티 인스턴스는 불변으로 취급한다. 조회 결과를 직접 바꾸지 않고 새 인스턴스를 만든 뒤
+                            <code>Replace</code>해야 한다. 이전 index key를 읽어 primary·secondary index를 함께 갱신하기 위한 계약이며
+                            transaction이나 예외 rollback을 제공하기 위한 장치는 아니다.
+                        </p>
+                        <pre><code>if (db.Items.TryFind(itemId, out var current))
+    db.Items.Replace(itemId, new Item(current.Id, nextOwnerId, nextLevel));</code></pre>
+                        <div class="flow" aria-label="인덱스 대상 엔터티 수정 순서">
+                            <div class="flow-node">
+                                <strong>Capture old keys</strong>
+                                <span>기존 index key 확보</span>
+                            </div>
+                            <div class="flow-arrow" aria-hidden="true">→</div>
+                            <div class="flow-node core">
+                                <strong>Validate replacement</strong>
+                                <span>새 인스턴스 · 같은 primary key</span>
+                            </div>
+                            <div class="flow-arrow" aria-hidden="true">→</div>
+                            <div class="flow-node">
+                                <strong>Swap &amp; refresh</strong>
+                                <span>Entity 교체 · Index 동시 갱신</span>
+                            </div>
+                        </div>
+                        <ul class="compact">
+                            <li><code>Add</code>·<code>TryAdd</code>, <code>Replace</code>·<code>TryReplace</code>, <code>Remove</code>를 기본 변경 API로 둔다.</li>
+                            <li>엔터티 defensive copy는 만들지 않으며 저장된 인스턴스 전체를 불변으로 취급한다.</li>
+                            <li>Primary key 변경은 <code>Replace</code>에서도 금지한다.</li>
+                            <li><code>ValidateIndexes</code>는 primary·secondary key drift를 진단한다.</li>
+                            <li>성공한 단일 변경은 primary map과 index에 즉시 반영하며 별도 <code>SaveChanges</code>를 요구하지 않는다.</li>
+                            <li>여러 행 transaction과 rollback은 범위 밖이며 예상 밖 예외가 발생한 Context는 호출자가 폐기한다.</li>
+                            <li>범용 <code>Upsert</code>는 실제 호출 사례가 생기기 전에는 public API에 넣지 않는다.</li>
+                        </ul>
+                        <div class="callout">
+                            <code>OdbContext</code>는 단일 스레드 전용이다. query·mutation·initialize·export에는 lock, 재진입 감지,
+                            동시 접근 방어를 제공하지 않으며 호출자가 같은 스레드에서 순서대로 실행한다.
+                        </div>
+                        <div class="callout warning">
+                            Export는 호출자가 건넨 <code>Stream</code>의 현재 위치부터 기록한다. 파일 교체나 Cloud 게시를 원자적으로
+                            확정하는 작업은 호출자 저장 계층의 책임이며, export 실패가 현재 메모리 상태를 되돌리지는 않는다.
+                        </div>
+                    </div>
+                </details>
+
+                <details id="memory">
+                    <summary>
+                        메모리와 할당 전략
+                        <span class="summary-note">Resident memory 허용</span>
+                    </summary>
+                    <div class="details-body">
+                        <p>
+                            메모리를 더 점유하는 것은 허용하지만, 실행 중에 계속 만들고 버리는 할당은 피한다.
+                            수천~수만 엔터티를 대상으로 표준 managed collection을 길게 유지한다.
+                        </p>
+                        <div class="card-grid">
+                            <div class="card">
+                                <strong>Eager allocation</strong>
+                                <p>Context의 capacity hint로 Table과 Index 용량을 미리 확보한다.</p>
+                            </div>
+                            <div class="card">
+                                <strong>Stable resident state</strong>
+                                <p>Primary map과 secondary bucket을 장수명으로 재사용하며 변경 이력은 보관하지 않는다.</p>
+                            </div>
+                            <div class="card">
+                                <strong>No shrink churn</strong>
+                                <p>자동 축소와 반복 재구축을 피하고 삭제 슬롯을 재사용한다.</p>
+                            </div>
+                        </div>
+                        <ul class="compact">
+                            <li>Primary와 unique index는 엔터티 참조를 직접 보관할 수 있다.</li>
+                            <li>질의마다 임시 <code>HashSet</code>이나 중간 <code>List</code>를 생성하지 않는다.</li>
+                            <li>Reflection은 모델 구성 단계로 제한하며 행 조회 hot path에서 사용하지 않는다.</li>
+                            <li>결과 materialization은 호출자가 <code>ToArray</code>, <code>ToList</code>로 선택한다.</li>
+                            <li>메모리 paging, compression, LRU, eviction, custom allocator는 범위 밖이다.</li>
+                        </ul>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <section class="section-group" aria-labelledby="lifecycle-heading">
+            <div class="section-group-heading">
+                <h2 id="lifecycle-heading">데이터 생명주기</h2>
+                <p>초기 적재, 전체 Export, 호출자 주도 부분 Export</p>
+            </div>
+            <div class="section-group-body">
+                <details id="async-lifecycle">
+                    <summary>
+                        비동기 생명주기
+                        <span class="summary-note">Persistence API async-only</span>
+                    </summary>
+                    <div class="details-body">
+                        <p>
+                            초기화, import, 전체·부분 export, 물리 write 경계는 public 동기 API를 만들지 않는다.
+                            표준 <code>Stream</code>이 전송 대상을 추상화하고 Task 계열이 완료·실패·취소를 표현한다.
+                        </p>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>작업</th>
+                                        <th>Public 형태</th>
+                                        <th>이유</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Initialize / Import</td>
+                                        <td><code>Task</code></td>
+                                        <td>외부 read와 CPU batch 처리</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Full / Partial export</td>
+                                        <td><code>Task</code></td>
+                                        <td><code>Stream</code> write와 cancellation</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Input / Output transport</td>
+                                        <td><code>Stream</code></td>
+                                        <td><code>MemoryStream</code>·<code>FileStream</code>·플랫폼 adapter 재사용</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Memory CRUD / Query</td>
+                                        <td>동기 fast path</td>
+                                        <td>기다릴 외부 작업이 없으며 Task overhead가 불필요</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="callout">
+                            byte source·sink를 별도로 재구현하지 않는다. callback 기반 SDK는 호출자 adapter 안에서
+                            표준 <code>Stream</code>으로 연결하며 별도 callback overload도 제공하지 않는다.
+                        </div>
+                        <p>
+                            Task는 외부 I/O 완료를 표현할 뿐 Core가 작업을 worker나 병렬 실행으로 옮기지 않는다.
+                            background 처리가 필요하면 호출자가 별도 데이터나 별도 Context로 구성하며 같은 Context에 동시에 접근하지 않는다.
+                        </p>
+                        <p>
+                            Import·Export session과 session이 반환한 collection은 해당 callback이 실행되는 동안만 사용하며 보관하지 않는다.
+                        </p>
+                    </div>
+                </details>
+
+                <details id="snapshot">
+                    <summary>
+                        전체 Snapshot
+                        <span class="summary-note">복구 가능한 baseline</span>
+                    </summary>
+                    <div class="details-body">
+                        <p>
+                            기본 XML·JSON snapshot은 라이브러리가 판별하는 <code>format</code> 식별자와
+                            호출자가 관리하는 <code>schemaVersion</code>을 서로 다른 값으로 기록한다.
+                            각 row의 객체 매핑은 .NET 표준 <code>XmlSerializer</code>와 <code>DataContractJsonSerializer</code>에 위임한다.
+                        </p>
+                        <pre><code>&lt;odbSnapshot format="unity-odb-xml-1" schemaVersion="3"&gt;
+  &lt;entity name="Item"&gt;
+    &lt;row&gt;
+      &lt;Code&gt;potion&lt;/Code&gt;
+      &lt;Id&gt;1&lt;/Id&gt;
+      &lt;Name xsi:nil="true" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" /&gt;
+    &lt;/row&gt;
+  &lt;/entity&gt;
+&lt;/odbSnapshot&gt;</code></pre>
+                        <ul class="compact">
+                            <li>초기화는 기존 Set 객체를 비운 뒤 선택한 포맷의 row를 순서대로 파싱해 <code>TryAdd</code>한다.</li>
+                            <li>Primary·Hash·Unique index는 <code>OnModelCreating</code> 선언에 따라 <code>TryAdd</code> 과정에서 다시 만든다.</li>
+                            <li>payload에는 schema·index catalog를 중복 저장하지 않으며 entity 순서는 모델 등록 순서를 따른다.</li>
+                            <li>기본 importer는 자체 exporter가 기록한 고정 envelope 순서를 그대로 받으며 JSON object 재정렬은 지원하지 않는다.</li>
+                            <li><code>format</code>은 ODB가 관리하는 불투명한 식별자다. XML은 <code>unity-odb-xml-1</code>, JSON은 <code>unity-odb-json-1</code>을 사용한다.</li>
+                            <li><code>schemaVersion</code>의 기본값은 1이다. 저장되는 entity·member의 이름, type, 의미가 바뀔 때 <code>SetSchemaVersion</code>으로 올리고 index·capacity 변경에는 올리지 않는다.</li>
+                            <li>기본 importer는 현재 <code>ModelSchemaVersion</code>과 같은 snapshot만 받는다. 다른 버전은 사용자 정의 importer에서 구버전 DTO를 읽어 현재 entity로 변환한다.</li>
+                            <li>XML row는 <code>XmlSerializer</code>와 XML serialization 특성, JSON row는 <code>DataContractJsonSerializer</code>와 data contract 특성을 따른다.</li>
+                            <li>JSON은 public get·set 멤버를 기본 계약으로 삼고 null과 빈 문자열을 별도 값으로 보존한다.</li>
+                            <li>알 수 없는 멤버 무시와 누락 멤버의 기본값 처리는 선택한 BCL serializer의 표준 동작을 따른다.</li>
+                            <li>Unity IL2CPP stripping에서는 엔터티 type, public 기본 생성자, 직렬화 멤버를 <code>[Preserve]</code> 또는 소비 프로젝트의 <code>link.xml</code>로 보존한다.</li>
+                            <li>실패와 취소는 그대로 전파하며 clear 뒤 적재된 빈 상태나 부분 초기화 상태가 남을 수 있다. rollback은 제공하지 않는다.</li>
+                            <li>XML exporter는 재사용 buffer로 비동기 batch write하고 JSON exporter와 기본 importer는 현재 snapshot을 버퍼링한다. 다른 포맷은 importer·exporter 구현으로 교체한다.</li>
+                        </ul>
+                        <pre><code>using (var buffer = new MemoryStream())
+{
+    await source.CopyToAsync(buffer, 81920, cancellationToken);
+    buffer.Position = 0;
+    var sourceSchemaVersion = ReadAndValidateHeader(buffer);
+
+    buffer.Position = 0;
+    var items = sourceSchemaVersion switch
+    {
+        1 =&gt; ReadAndUpgradeV1Items(buffer),
+        3 =&gt; ReadV3Items(buffer),
+        _ =&gt; throw new InvalidDataException($"Unsupported schema version: {sourceSchemaVersion}")
+    };
+
+    foreach (var item in items)
+    {
+        if (session.TryAdd(item) == false)
+            throw new InvalidDataException("Duplicate primary or unique key.");
+    }
+}</code></pre>
+                        <p>
+                            위 <code>ReadAndValidateHeader</code>·<code>ReadAndUpgradeV1Items</code>·<code>ReadV3Items</code>는 호출자가 구현하는 의사 코드다.
+                            입력을 한 번 버퍼링하고 <code>format</code>을 검증한 뒤 source <code>schemaVersion</code>에 맞는 parser로 분기한다.
+                            <code>session.ModelSchemaVersion</code>은 현재 Context가 요구하는 목표 버전이므로 <code>InitializeAsync</code>에 별도 version 인자를 추가하지 않는다.
+                        </p>
+                    </div>
+                </details>
+
+                <details id="partial-export">
+                    <summary>
+                        호출자 주도 부분 Export
+                        <span class="summary-note">변경 추적은 Core 밖</span>
+                    </summary>
+                    <div class="details-body">
+                        <p>
+                            기본 exporter는 전체 DB를 기록한다. 사용자 정의 exporter는 <code>OdbExportSession</code>에서
+                            필요한 Set을 요청한 뒤 row를 직접 골라 호출자가 원하는 포맷으로 기록한다.
+                        </p>
+                        <div class="flow" aria-label="부분 Export 책임 흐름">
+                            <div class="flow-node">
+                                <strong>Caller Selection</strong>
+                                <span>저장할 entity·row 결정</span>
+                            </div>
+                            <div class="flow-arrow" aria-hidden="true">→</div>
+                            <div class="flow-node core">
+                                <strong>Custom Exporter</strong>
+                                <span>선택 범위를 Stream에 기록</span>
+                            </div>
+                            <div class="flow-arrow" aria-hidden="true">→</div>
+                            <div class="flow-node">
+                                <strong>Caller Storage</strong>
+                                <span>파일·Steam·Cloud 게시</span>
+                            </div>
+                        </div>
+                        <ul class="compact">
+                            <li>UnityOdb는 revision, dirty key, journal, checkpoint, tombstone을 관리하지 않는다.</li>
+                            <li>무엇이 변경됐고 무엇을 저장할지는 호출자가 별도로 추적한다.</li>
+                            <li>병합, 재시도, 압축, 원자 게시 여부도 호출자 저장 계층의 책임이다. 압축은 표준 <code>GZipStream</code>을 조합한다.</li>
+                            <li>Export가 끝날 때까지 같은 Context를 변경하지 않는 것은 호출 계약이다.</li>
+                            <li>Core는 freeze, lock, 원자 snapshot을 제공하지 않고 live read-only collection을 exporter에 노출한다.</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details id="utf8-format">
+                    <summary>
+                        표준 XML·JSON 직렬화와 압축
+                        <span class="summary-note">BCL contract 우선</span>
+                    </summary>
+                    <div class="details-body">
+                        <p>
+                            기본 exporter는 UTF-8 without BOM으로 기록한다. XML 입력은 <code>XmlReader</code>의 표준 인코딩 감지를 따르고
+                            JSON 입력은 UTF-8을 사용하며, row 매핑은 각 BCL serializer의 기본 계약을 따른다.
+                        </p>
+                        <pre><code>await using (var gzip = new GZipStream(destination, System.IO.Compression.CompressionLevel.Fastest, true))
+    await db.ExportAsync(gzip, new OdbJsonSnapshotExporter(), cancellationToken);
+
+await using (var gzip = new GZipStream(source, CompressionMode.Decompress, true))
+    await db.InitializeAsync(gzip, new OdbJsonSnapshotImporter(), cancellationToken);</code></pre>
+                        <p>
+                            압축 여부는 importer·exporter 옵션이 아니라 전달한 <code>Stream</code> 조합으로 결정한다.
+                            Export 뒤 compressor를 dispose해야 footer가 완성되며 <code>FlushAsync</code>만으로는 충분하지 않다. 세 번째 인자 <code>true</code>는 호출자 소유 stream을 열어 둔다.
+                        </p>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>항목</th>
+                                        <th>기본 규칙</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>출력 인코딩</td>
+                                        <td>UTF-8 without BOM</td>
+                                    </tr>
+                                    <tr>
+                                        <td>입력 인코딩</td>
+                                        <td>XML은 <code>XmlReader</code> 자동 감지, JSON은 UTF-8</td>
+                                    </tr>
+                                    <tr>
+                                        <td>포맷 식별자</td>
+                                        <td>XML <code>unity-odb-xml-1</code>, JSON <code>unity-odb-json-1</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Schema 버전</td>
+                                        <td>기본값 1, 호출자가 <code>SetSchemaVersion</code>으로 변경하며 JSON에는 number로 기록</td>
+                                    </tr>
+                                    <tr>
+                                        <td>줄바꿈</td>
+                                        <td>문자열의 CR·LF를 XML 문자 참조 또는 JSON escape로 보존</td>
+                                    </tr>
+                                    <tr>
+                                        <td>멤버·값 변환</td>
+                                        <td><code>XmlSerializer</code> 또는 <code>DataContractJsonSerializer</code> 기본 매핑</td>
+                                    </tr>
+                                    <tr>
+                                        <td>문자열 인덱스</td>
+                                        <td>기본 Ordinal, 필요 시 OrdinalIgnoreCase 명시</td>
+                                    </tr>
+                                    <tr>
+                                        <td>null 표현</td>
+                                        <td>XML은 <code>xsi:nil</code>, JSON은 <code>null</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td>출력</td>
+                                        <td>호출자 소유 <code>Stream</code>에 직접 기록</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p>
+                            XML의 <code>odbSnapshot</code>·<code>entity</code>와 JSON의 <code>format</code>·<code>schemaVersion</code>·<code>entities</code> envelope는 ODB 고유 계약으로 유지한다.
+                            객체 멤버를 텍스트로 바꾸는 범용 로직은 BCL에 맡기고 별도 scalar codec을 두지 않는다.
+                        </p>
+                        <p>
+                            사용자 정의 값은 선택한 BCL serializer가 지원하는 surrogate property와 표준 특성으로 표현한다.
+                            envelope 자체가 다른 포맷은 별도 importer·exporter가 담당한다.
+                        </p>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <section class="section-group" aria-labelledby="contract-heading">
+            <div class="section-group-heading">
+                <h2 id="contract-heading">계약과 품질</h2>
+                <p>초기 public API와 검증 가능한 성능 기준</p>
+            </div>
+            <div class="section-group-body">
+                <details id="api-draft">
+                    <summary>
+                        Public API 방향
+                        <span class="summary-note">현재 Core Runtime 기준</span>
+                    </summary>
+                    <div class="details-body">
+                        <p>
+                            프로젝트 명명 규칙에 따라 first-party interface는 <code>I...</code> 접두사가 아니라
+                            <code>...Interface</code> 접미사를 사용한다.
+                        </p>
+                        <p>
+                            입력과 출력은 .NET 표준 <code>Stream</code>을 사용해 <code>MemoryStream</code>, <code>FileStream</code>,
+                            플랫폼 adapter를 그대로 받는다. 별도 byte source·sink interface는 만들지 않는다.
+                        </p>
+                        <pre><code>public interface OdbImporterInterface
+{
+    Task ImportAsync(OdbImportSession session, Stream source, CancellationToken cancellationToken);
+}
+
+public interface OdbExporterInterface
+{
+    Task ExportAsync(OdbExportSession session, Stream destination, CancellationToken cancellationToken);
+}</code></pre>
+                        <pre><code>public abstract class OdbContext
+{
+    public Task InitializeAsync(
+        Stream source, OdbImporterInterface importer, CancellationToken cancellationToken = default);
+
+    public Task ExportAsync(
+        Stream destination, OdbExporterInterface exporter, CancellationToken cancellationToken = default);
+
+    protected abstract void OnModelCreating(OdbModelBuilder modelBuilder);
+
+    protected OdbSet&lt;TEntity, TKey&gt; GetSet&lt;TEntity, TKey&gt;()
+        where TEntity : class
+        where TKey : notnull;
+}</code></pre>
+                        <pre><code>if (db.Items.TryFind(itemId, out var current))
+    db.Items.Replace(itemId, current.WithLevel(nextLevel));
+
+var ownerItems = db.Items.FindBy(item =&gt; item.OwnerId, ownerId);
+
+if (db.Items.TryFindBy(item =&gt; item.Code, itemCode, out var codedItem))
+    Use(codedItem);
+
+using (var source = File.OpenRead(snapshotPath))
+    await db.InitializeAsync(source, new OdbXmlSnapshotImporter(), cancellationToken);
+using (var destination = File.Create(snapshotPath))
+    await db.ExportAsync(destination, new OdbXmlSnapshotExporter(), cancellationToken);</code></pre>
+                        <div class="callout warning">
+                            입력은 현재 위치부터 끝까지 소비하고 출력은 현재 위치부터 기록하며 Core가 위치를 복원하지 않는다. 두 Stream은
+                            호출자가 소유하므로 Core가 dispose하지 않는다. 실패한 출력은 일부 기록됐을 수 있어 원자 교체는 호출자가 담당한다.
+                        </div>
+                    </div>
+                </details>
+
+                <details id="performance">
+                    <summary>
+                        성능 계약
+                        <span class="summary-note">속도 우선 · 과최적화 금지</span>
+                    </summary>
+                    <div class="details-body">
+                        <p>
+                            목표는 극단적인 zero-allocation 엔진이 아니라, 명시적 index-backed API를 호출했는데도 전체 순회하거나
+                            정상 사용 중 GC spike를 만드는 어처구니없는 성능 실패를 방지하는 것이다.
+                        </p>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>연산</th>
+                                        <th>목표 경로</th>
+                                        <th>계약</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Primary <code>TryFind</code></td>
+                                        <td>Dictionary lookup 1회</td>
+                                        <td>LINQ·reflection·boxing·lock·복사 없음</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Unique <code>TryFindBy</code></td>
+                                        <td>Selector catalog + Dictionary lookup</td>
+                                        <td>결과 materialization 없음</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Hash <code>FindBy</code></td>
+                                        <td>Selector catalog + Dictionary + 기존 bucket</td>
+                                        <td>행 수가 아닌 결과 수에 비례</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Range index</td>
+                                        <td>Ordered seek + bucket</td>
+                                        <td>전체 정렬을 반복하지 않음</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Partial export</td>
+                                        <td>Custom exporter selection</td>
+                                        <td>요청한 Set만 순회 · row filter는 exporter 비용</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Full export</td>
+                                        <td>Dense table scan</td>
+                                        <td>중간 전체 string을 생성하지 않음</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <h3>Steady-state 금지 항목</h3>
+                        <ul class="compact">
+                            <li>행마다 wrapper·iterator·reflection 객체 생성</li>
+                            <li>인덱스 교집합마다 새 <code>HashSet</code> 생성</li>
+                            <li>명시적 index-backed API의 silent full scan</li>
+                            <li>부분 export에서 선택하지 않은 Set까지 강제로 순회</li>
+                            <li>collection의 반복 resize·shrink와 대형 임시 버퍼 폐기</li>
+                        </ul>
+                        <p>
+                            <code>OdbSet</code>의 일반 LINQ는 전체 Set을, <code>FindBy</code> 결과의 LINQ는 선택된 bucket만 순회한다.
+                            표준 LINQ iterator allocation과 interface 열거의 boxing 가능성은 허용하고, <code>OrderBy</code>는 대상 범위를
+                            buffer에 담아 정렬한다. Selector 식과 materialization 비용이 측정상 문제가 되면 prepared query로 분리한다.
+                        </p>
+                    </div>
+                </details>
+
+                <details id="validation">
+                    <summary>
+                        검증과 출시 기준
+                        <span class="summary-note">Player에서 측정</span>
+                    </summary>
+                    <div class="details-body">
+                        <div class="card-grid">
+                            <div class="card">
+                                <strong>Correctness</strong>
+                                <p>무작위 Add·Replace·Remove 후 index 결과를 기준 LINQ 결과와 비교한다.</p>
+                            </div>
+                            <div class="card">
+                                <strong>Performance</strong>
+                                <p>Dictionary와 List baseline 대비 lookup, update, import, export를 측정한다.</p>
+                            </div>
+                            <div class="card">
+                                <strong>Compatibility</strong>
+                                <p>깨끗한 Unity project의 Mono·IL2CPP Player에서 import부터 재복구까지 실행한다.</p>
+                            </div>
+                        </div>
+                        <ul class="compact">
+                            <li>1천, 1만, 10만 row에서 primary·unique·hash·range lookup을 측정한다.</li>
+                            <li>cold query와 cached·prepared query를 분리 측정한다.</li>
+                            <li>반복 fast path의 GC allocation과 full·partial export peak를 기록한다.</li>
+                            <li><code>Explain()</code> 또는 동등한 진단에서 IndexSeek·RangeScan·FullScan을 확인한다.</li>
+                            <li>개발 환경은 silent FullScan을 경고하고 strict option에서는 예외로 전환할 수 있다.</li>
+                            <li>Runtime assembly는 <code>UnityEditor</code>, 동적 proxy, <code>Reflection.Emit</code>에 의존하지 않는다.</li>
+                            <li>Initialize의 지원하지 않는 format·불일치 schemaVersion·고정 순서 위반·key 충돌이 즉시 실패하는지 검증한다.</li>
+                            <li>전체·부분 export와 import 실패 전파가 호출자 계약대로 동작하는지 검증한다.</li>
+                        </ul>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <section class="section-group" aria-labelledby="decisions-heading">
+            <div class="section-group-heading">
+                <h2 id="decisions-heading">결정 상태</h2>
+                <p>확정된 방향과 구현 전에 남은 선택</p>
+            </div>
+            <div class="section-group-body">
+                <details id="decision-status">
+                    <summary>
+                        확정 사항
+                        <span class="summary-note">후속 구현이 보존할 방향</span>
+                    </summary>
+                    <div class="details-body">
+                        <div class="decision">
+                            <span class="decision-state">확정</span>
+                            <div class="decision-copy">
+                                <strong>메모리 상주형 엔진</strong>
+                                <span>프로세스 수명 안에서 모든 활성 데이터를 메모리에 두며 수천~수만 엔터티를 우선한다.</span>
+                            </div>
+                        </div>
+                        <div class="decision">
+                            <span class="decision-state">확정</span>
+                            <div class="decision-copy">
+                                <strong>물리 저장 분리</strong>
+                                <span>파일·Steam·Cloud와 원자적 게시는 호출자 책임이며 UnityOdb는 표준 Stream 경계만 제공한다.</span>
+                            </div>
+                        </div>
+                        <div class="decision">
+                            <span class="decision-state">확정</span>
+                            <div class="decision-copy">
+                                <strong>명시적 모델과 index</strong>
+                                <span>Context에서 entity, key, index, capacity를 사전에 선언하고 snapshot에는 중복 기록하지 않는다.</span>
+                            </div>
+                        </div>
+                        <div class="decision">
+                            <span class="decision-state">확정</span>
+                            <div class="decision-copy">
+                                <strong>속도 우선 메모리 사용</strong>
+                                <span>중복 참조와 eager index는 허용하되 반복 할당과 GC churn은 피한다.</span>
+                            </div>
+                        </div>
+                        <div class="decision">
+                            <span class="decision-state">확정</span>
+                            <div class="decision-copy">
+                                <strong>표준 XML·JSON serialization</strong>
+                                <span>row 매핑은 BCL serializer에 위임한다. 포맷은 불투명한 식별자로 판별하고 호출자 데이터 계약은 별도 <code>schemaVersion</code>으로 관리한다.</span>
+                            </div>
+                        </div>
+                        <div class="decision">
+                            <span class="decision-state">확정</span>
+                            <div class="decision-copy">
+                                <strong>Async persistence lifecycle</strong>
+                                <span>Initialize·Import·Export·storage write는 async-only이며 Memory CRUD는 동기 fast path다.</span>
+                            </div>
+                        </div>
+                        <div class="decision">
+                            <span class="decision-state">확정</span>
+                            <div class="decision-copy">
+                                <strong>Full snapshot + caller-defined partial export</strong>
+                                <span>기본 XML·JSON은 전체 데이터를 기록하고 custom exporter는 호출자가 선택한 일부만 기록한다. 압축은 호출자가 표준 <code>GZipStream</code>을 조합한다.</span>
+                            </div>
+                        </div>
+                        <div class="decision">
+                            <span class="decision-state">확정</span>
+                            <div class="decision-copy">
+                                <strong>Caller-defined schema migration</strong>
+                                <span>기본 importer는 같은 schema만 받고 구버전 변환은 사용자 정의 importer가 source 버전을 읽어 현재 model로 적재한다.</span>
+                            </div>
+                        </div>
+                        <div class="decision">
+                            <span class="decision-state">확정</span>
+                            <div class="decision-copy">
+                                <strong>LINQ 자체 재구현 안 함</strong>
+                                <span>Selector 기반 index API와 표준 LINQ를 병행한다. 표준 LINQ는 자동으로 인덱스를 선택하지 않는다.</span>
+                            </div>
+                        </div>
+                        <div class="decision">
+                            <span class="decision-state">확정</span>
+                            <div class="decision-copy">
+                                <strong>장수명 OdbContext, SaveChanges 없음</strong>
+                                <span>Context는 활성 DB를 소유하고 memory 변경은 즉시 반영한다. transaction·rollback·write batch는 제공하지 않는다.</span>
+                            </div>
+                        </div>
+                        <div class="decision">
+                            <span class="decision-state">확정</span>
+                            <div class="decision-copy">
+                                <strong>Single-thread only</strong>
+                                <span>CRUD·initialize·export에 lock·재진입 상태·동시 접근 방어를 두지 않으며 호출자가 같은 스레드에서 순서대로 수행한다.</span>
+                            </div>
+                        </div>
+                        <div class="decision">
+                            <span class="decision-state">확정</span>
+                            <div class="decision-copy">
+                                <strong>실사용 조건에서 역산한 인덱스</strong>
+                                <span>Index는 모델에 한 번 선언하고 호출자는 <code>OdbSet</code>에서 property selector로 조회한다. Definition과 runtime Index는 외부에 노출하지 않는다.</span>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details id="open-items">
+                    <summary>
+                        미확정 사항과 보류 기능
+                        <span class="summary-note">Prototype·benchmark 필요</span>
+                    </summary>
+                    <div class="details-body">
+                        <div class="decision">
+                            <span class="decision-state defer">보류</span>
+                            <div class="decision-copy">
+                                <strong>대규모 snapshot import streaming</strong>
+                                <span>export는 직접 Stream에 기록한다. 현재 buffered import의 실제 메모리 비용이 문제가 될 때 streaming importer를 검토한다.</span>
+                            </div>
+                        </div>
+                        <div class="decision">
+                            <span class="decision-state defer">보류</span>
+                            <div class="decision-copy">
+                                <strong>제한된 IQueryable provider</strong>
+                                <span>Selector 기반 index API가 불편하다는 실사용 증거와 자동 최적화 benchmark가 생길 때 검토한다.</span>
+                            </div>
+                        </div>
+                        <div class="decision">
+                            <span class="decision-state defer">보류</span>
+                            <div class="decision-copy">
+                                <strong>Physical index image</strong>
+                                <span>Index rebuild가 실제 boot 병목으로 측정될 때 삭제 가능한 cache로 검토한다.</span>
+                            </div>
+                        </div>
+                        <div class="decision">
+                            <span class="decision-state defer">제외</span>
+                            <div class="decision-copy">
+                                <strong>SQLite·SQL·EF 전체 기능</strong>
+                                <span>현재 데이터 규모와 책임 경계에서는 구현하지 않는다.</span>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details id="implementation-phases">
+                    <summary>
+                        구현 순서
+                        <span class="summary-note">작은 fast path부터</span>
+                    </summary>
+                    <div class="details-body">
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>단계</th>
+                                        <th>범위</th>
+                                        <th>완료 기준</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>1. Core model · MVP 구현</td>
+                                        <td>Context, Set, model builder, primary key, capacity</td>
+                                        <td>.NET Standard 2.1 build 통과 · Dictionary baseline benchmark와 IL2CPP build는 후속 검증</td>
+                                    </tr>
+                                    <tr>
+                                        <td>2. Index &amp; mutation · MVP 구현</td>
+                                        <td>Primary·Unique·Hash, Add·Replace·Remove, standard LINQ</td>
+                                        <td>key 충돌·index 갱신·Dictionary baseline 성능 검증 통과 · Ordered와 무작위 검증은 후속</td>
+                                    </tr>
+                                    <tr>
+                                        <td>3. Async XML·JSON snapshot · MVP 구현</td>
+                                        <td><code>Stream</code> 입출력, BCL serializer row, 포맷 식별자와 schema version 분리, reset 후 TryAdd 초기화</td>
+                                        <td>XML·JSON의 null·빈 문자열·줄바꿈·index와 GZip round-trip smoke 검증</td>
+                                    </tr>
+                                    <tr>
+                                        <td>4. 호출자 주도 부분 Export</td>
+                                        <td>Custom exporter가 요청한 Set에서 row를 골라 출력, change journal 없음</td>
+                                        <td>선택하지 않은 Set을 순회하지 않고 출력 범위와 저장 책임이 분리됨</td>
+                                    </tr>
+                                    <tr>
+                                        <td>5. Diagnostics</td>
+                                        <td>Explain, FullScan warning·strict option, performance suite</td>
+                                        <td>silent unindexing과 성능 회귀를 자동 검출</td>
+                                    </tr>
+                                    <tr>
+                                        <td>6. Optional ergonomics</td>
+                                        <td>Prepared query, 제한된 provider, index cache 후보</td>
+                                        <td>실제 프로젝트 사용성과 benchmark가 필요성을 증명</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="callout">
+                            각 단계는 기능 수보다 fast path의 단순성, 인덱스 정합성, clean Player build를 먼저 통과한다.
+                            편의 API는 core lookup과 export 성능을 가리지 않는 범위에서만 추가한다.
+                        </div>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <p class="footer-note">
+            UnityOdb 설계 + 구현 초안 · 기준 환경 Unity 6000.4.5f1 · 현재 구현 상태 Core Runtime MVP
+        </p>
+    </main>
+
+    <script>
+        (function () {
+            var links = Array.prototype.slice.call(document.querySelectorAll(".nav-link"));
+            var targets = links
+                .map(function (link) {
+                    return document.querySelector(link.getAttribute("href"));
+                })
+                .filter(function (target) {
+                    return target != null;
+                });
+
+            links.forEach(function (link) {
+                link.addEventListener("click", function () {
+                    var target = document.querySelector(link.getAttribute("href"));
+
+                    if ((target != null) && (target.tagName === "DETAILS")) {
+                        target.open = true;
+                    }
+                });
+            });
+
+            if ("IntersectionObserver" in window) {
+                var observer = new IntersectionObserver(function (entries) {
+                    var visible = entries
+                        .filter(function (entry) {
+                            return entry.isIntersecting;
+                        })
+                        .sort(function (left, right) {
+                            return left.boundingClientRect.top - right.boundingClientRect.top;
+                        });
+
+                    if (visible.length > 0) {
+                        var id = "#" + visible[0].target.id;
+
+                        links.forEach(function (link) {
+                            link.classList.toggle("active", link.getAttribute("href") === id);
+                        });
+                    }
+                }, {
+                    rootMargin: "-20% 0px -68% 0px",
+                    threshold: 0
+                });
+
+                targets.forEach(function (target) {
+                    observer.observe(target);
+                });
+            }
+        }());
+    </script>
+</body>
+</html>
