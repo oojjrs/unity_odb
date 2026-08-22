@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -12,7 +13,8 @@ namespace oojjrs.odb
     internal static class OdbXmlSnapshot
     {
         private const int ExportBufferSize = 81920;
-        private const string FormatIdentifier = "unity-odb-xml-1";
+        private const string IdentityFormatIdentifier = "unity-odb-xml-2";
+        private const string LegacyFormatIdentifier = "unity-odb-xml-1";
 
         private static readonly XmlSerializerNamespaces __emptyNamespaces = CreateEmptyNamespaces();
         private static readonly Dictionary<Type, XmlSerializer> __serializers = new();
@@ -39,10 +41,13 @@ namespace oojjrs.odb
                 OmitXmlDeclaration = false
             }))
             {
+                var hasIdentities = session.IdentityStates.Count > 0;
                 writer.WriteStartDocument();
                 writer.WriteStartElement("odbSnapshot");
-                writer.WriteAttributeString("format", FormatIdentifier);
+                writer.WriteAttributeString("format", hasIdentities ? IdentityFormatIdentifier : LegacyFormatIdentifier);
                 writer.WriteAttributeString("schemaVersion", XmlConvert.ToString(session.ModelSchemaVersion));
+                if (hasIdentities)
+                    WriteIdentityStates(session, writer);
                 foreach (var entityBuilder in session.EntityBuilders)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -98,6 +103,35 @@ namespace oojjrs.odb
             return serializer;
         }
 
+        private static IReadOnlyList<OdbIdentityState> ReadIdentityStates(XmlReader reader)
+        {
+            var identityStates = new List<OdbIdentityState>();
+            var identitiesAreEmpty = reader.IsEmptyElement;
+            reader.ReadStartElement("identityGenerators");
+            if (identitiesAreEmpty == false)
+            {
+                while ((reader.MoveToContent() == XmlNodeType.Element) && reader.IsStartElement("identity"))
+                {
+                    if (reader.IsEmptyElement == false)
+                        throw new InvalidDataException("An XML snapshot identity element must be empty.");
+
+                    var scope = GetRequiredAttribute(reader, "scope");
+                    var name = GetRequiredAttribute(reader, "name");
+                    var keyTypeName = GetRequiredAttribute(reader, "keyType");
+                    var highWaterMarkText = GetRequiredAttribute(reader, "highWaterMark");
+                    if (long.TryParse(highWaterMarkText, NumberStyles.None, CultureInfo.InvariantCulture, out var highWaterMark) == false)
+                        throw new InvalidDataException($"The XML snapshot identity '{name}' contains an invalid high-water mark.");
+
+                    identityStates.Add(new OdbIdentityState(scope, name, keyTypeName, highWaterMark));
+                    reader.ReadStartElement("identity");
+                }
+
+                reader.ReadEndElement();
+            }
+
+            return identityStates;
+        }
+
         private static void ImportEntityRows(OdbImportSession session, XmlReader reader, OdbEntityBuilderInterface entityBuilder, CancellationToken cancellationToken)
         {
             var entityIsEmpty = reader.IsEmptyElement;
@@ -117,8 +151,15 @@ namespace oojjrs.odb
                 if (entity == null)
                     throw new InvalidDataException($"Entity '{entityBuilder.Name}' contains a null row.");
 
-                if (session.TryAdd(entityBuilder, entity) == false)
-                    throw new InvalidDataException($"Entity '{entityBuilder.Name}' contains a duplicate primary or unique key.");
+                try
+                {
+                    if (session.TryAdd(entityBuilder, entity) == false)
+                        throw new InvalidDataException($"Entity '{entityBuilder.Name}' contains a duplicate primary or unique key.");
+                }
+                catch (OdbGeneratedPrimaryKeyException exception)
+                {
+                    throw new InvalidDataException($"Entity '{entityBuilder.Name}' contains an invalid generated primary key.", exception);
+                }
             }
 
             if ((reader.NodeType != XmlNodeType.EndElement) || (reader.LocalName != "entity") || (reader.NamespaceURI.Length != 0))
@@ -144,7 +185,9 @@ namespace oojjrs.odb
                     if (reader.MoveToContent() != XmlNodeType.Element || reader.IsStartElement("odbSnapshot") == false)
                         throw new InvalidDataException("The XML snapshot root is invalid.");
 
-                    if (GetRequiredAttribute(reader, "format") != FormatIdentifier)
+                    var formatIdentifier = GetRequiredAttribute(reader, "format");
+                    var hasIdentityStates = formatIdentifier == IdentityFormatIdentifier;
+                    if ((hasIdentityStates == false) && (formatIdentifier != LegacyFormatIdentifier))
                         throw new InvalidDataException("The XML snapshot format is not supported.");
 
                     var schemaVersion = XmlConvert.ToInt32(GetRequiredAttribute(reader, "schemaVersion"));
@@ -153,9 +196,24 @@ namespace oojjrs.odb
                             $"The XML snapshot schema version '{schemaVersion}' does not match model schema version '{session.ModelSchemaVersion}'.");
 
                     var snapshotIsEmpty = reader.IsEmptyElement;
+                    if (hasIdentityStates && snapshotIsEmpty)
+                        throw new InvalidDataException("The XML snapshot does not contain identity generator state.");
+
                     reader.ReadStartElement("odbSnapshot");
+                    IReadOnlyList<OdbIdentityState> identityStates = null;
+                    var importedEntityBuilders = new List<OdbEntityBuilderInterface>();
                     if (snapshotIsEmpty == false)
                     {
+                        if (hasIdentityStates)
+                        {
+                            reader.MoveToContent();
+                            if (reader.IsStartElement("identityGenerators") == false)
+                                throw new InvalidDataException("The XML snapshot does not contain identity generator state.");
+
+                            identityStates = ReadIdentityStates(reader);
+                            session.AdvanceIdentityStates(identityStates);
+                        }
+
                         var importedEntityNames = new HashSet<string>(StringComparer.Ordinal);
                         while ((reader.MoveToContent() == XmlNodeType.Element) && reader.IsStartElement("entity"))
                         {
@@ -168,6 +226,7 @@ namespace oojjrs.odb
                             if (session.TryGetEntityBuilder(entityName, out var entityBuilder) == false)
                                 throw new InvalidDataException($"The entity '{entityName}' is not registered in this import session.");
 
+                            importedEntityBuilders.Add(entityBuilder);
                             ImportEntityRows(session, reader, entityBuilder, cancellationToken);
                         }
                     }
@@ -183,8 +242,27 @@ namespace oojjrs.odb
 
                     if (reader.MoveToContent() != XmlNodeType.None)
                         throw new InvalidDataException("The XML snapshot contains trailing content.");
+
+                    if (hasIdentityStates)
+                        session.ValidateIdentityStatesExact(identityStates, importedEntityBuilders);
                 }
             }
+        }
+
+        private static void WriteIdentityStates(OdbExportSession session, XmlWriter writer)
+        {
+            writer.WriteStartElement("identityGenerators");
+            foreach (var identity in session.IdentityStates)
+            {
+                writer.WriteStartElement("identity");
+                writer.WriteAttributeString("scope", identity.Scope);
+                writer.WriteAttributeString("name", identity.Name);
+                writer.WriteAttributeString("keyType", identity.KeyTypeName);
+                writer.WriteAttributeString("highWaterMark", identity.HighWaterMark.ToString(CultureInfo.InvariantCulture));
+                writer.WriteEndElement();
+            }
+
+            writer.WriteEndElement();
         }
     }
 }

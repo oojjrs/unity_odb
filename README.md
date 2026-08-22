@@ -16,7 +16,9 @@ https://github.com/oojjrs/unity_odb.git?path=/Packages/src
 | --- | --- | --- |
 | [`OdbContext`](Packages/src/Runtime/OdbContext.cs) | 추상 클래스 | 모델을 구성하고 데이터 집합, reset 초기화, 추가 가져오기와 선택 가능한 스냅샷 출력을 관리한다. |
 | [`OdbSet<TEntity, TKey>`](Packages/src/Runtime/OdbSet.cs) | 컬렉션 | 엔터티 추가·교체·삭제와 기본 키·인덱스 조회를 제공한다. |
-| [`OdbModelBuilder`](Packages/src/Runtime/OdbModelBuilder.cs) | 빌더 | 엔터티, 기본 키, 보조 인덱스와 스키마 버전을 선언한다. |
+| [`OdbModelBuilder`](Packages/src/Runtime/OdbModelBuilder.cs) | 빌더 | 엔터티, 기본 키, 선택적 identity 생성, 보조 인덱스와 스키마 버전을 선언한다. |
+| [`OdbIdentity<TKey>`](Packages/src/Runtime/OdbIdentity.cs) | 모델 핸들 | 여러 엔터티 타입이 하나의 Context 전역 identity 순서를 공유하게 한다. |
+| [`OdbIdentityState`](Packages/src/Runtime/OdbIdentityState.cs) | 스냅샷 상태 | 사용자 정의 스냅샷이 identity high-water mark를 보존할 수 있게 한다. |
 | `OdbXmlSnapshotImporter` / `OdbXmlSnapshotExporter` | 스냅샷 | 동일한 XML 형식으로 포함된 엔터티를 가져오고 전체 또는 선택한 엔터티를 내보낸다. |
 | `OdbJsonSnapshotImporter` / `OdbJsonSnapshotExporter` | 스냅샷 | 동일한 JSON 형식으로 포함된 엔터티를 가져오고 전체 또는 선택한 엔터티를 내보낸다. |
 

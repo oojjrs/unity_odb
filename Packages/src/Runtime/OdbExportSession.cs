@@ -11,9 +11,10 @@ namespace oojjrs.odb
 
         internal IReadOnlyList<OdbEntityBuilderInterface> EntityBuilders { get; }
         public IReadOnlyList<Type> EntityTypes { get; }
+        public IReadOnlyList<OdbIdentityState> IdentityStates { get; }
         public int ModelSchemaVersion { get; }
 
-        internal OdbExportSession(OdbModelBuilder modelBuilder, Dictionary<Type, object> setsByType, IReadOnlyCollection<Type> entityTypes)
+        internal OdbExportSession(OdbModelBuilder modelBuilder, IReadOnlyDictionary<string, OdbModelBuilder.IdentityRuntimeInterface> identitiesByStateKey, Dictionary<Type, object> setsByType, IReadOnlyCollection<Type> entityTypes)
         {
             ModelSchemaVersion = modelBuilder.ModelSchemaVersion;
             SetsByType = setsByType;
@@ -26,6 +27,7 @@ namespace oojjrs.odb
                 foreach (var entityBuilder in modelBuilder.EntityBuilders)
                     allEntityTypes.Add(entityBuilder.EntityType);
                 EntityTypes = allEntityTypes.AsReadOnly();
+                IdentityStates = GetIdentityStates(GetIdentities(EntityBuilders, identitiesByStateKey));
                 return;
             }
 
@@ -57,6 +59,31 @@ namespace oojjrs.odb
             EntityBuilders = entityBuilders;
             EntityBuildersByType = entityBuildersByType;
             EntityTypes = orderedEntityTypes.AsReadOnly();
+            IdentityStates = GetIdentityStates(GetIdentities(EntityBuilders, identitiesByStateKey));
+        }
+
+        private static IReadOnlyList<OdbModelBuilder.IdentityRuntimeInterface> GetIdentities(IReadOnlyList<OdbEntityBuilderInterface> entityBuilders, IReadOnlyDictionary<string, OdbModelBuilder.IdentityRuntimeInterface> identitiesByStateKey)
+        {
+            var identities = new List<OdbModelBuilder.IdentityRuntimeInterface>();
+            var identityStateKeys = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var entityBuilder in entityBuilders)
+            {
+                var identity = entityBuilder.Identity;
+                if ((identity == null) || (identityStateKeys.Add(identity.StateKey) == false))
+                    continue;
+
+                identities.Add(identitiesByStateKey[identity.StateKey]);
+            }
+
+            return identities;
+        }
+
+        private static IReadOnlyList<OdbIdentityState> GetIdentityStates(IReadOnlyList<OdbModelBuilder.IdentityRuntimeInterface> identities)
+        {
+            var identityStates = new List<OdbIdentityState>(identities.Count);
+            foreach (var identity in identities)
+                identityStates.Add(new OdbIdentityState(identity.Scope, identity.Name, identity.KeyTypeName, identity.HighWaterMark));
+            return identityStates.AsReadOnly();
         }
 
         internal IEnumerable GetEntities(OdbEntityBuilderInterface entityBuilder)

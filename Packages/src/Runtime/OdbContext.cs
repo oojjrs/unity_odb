@@ -9,6 +9,7 @@ namespace oojjrs.odb
     public abstract class OdbContext
     {
         private bool _isBuildingModel;
+        private Dictionary<string, OdbModelBuilder.IdentityRuntimeInterface> _identities;
         private OdbModelBuilder _modelBuilder;
         private Dictionary<Type, object> _sets;
 
@@ -27,7 +28,8 @@ namespace oojjrs.odb
                 OnModelCreating(_modelBuilder);
                 _modelBuilder.Freeze();
 
-                _sets = _modelBuilder.CreateSets();
+                _identities = _modelBuilder.CreateIdentityRuntimes();
+                _sets = _modelBuilder.CreateSets(_identities);
             }
             finally
             {
@@ -58,7 +60,7 @@ namespace oojjrs.odb
 
             cancellationToken.ThrowIfCancellationRequested();
             EnsureModelInitialized();
-            await exporter.ExportAsync(new OdbExportSession(_modelBuilder, _sets, entityTypes), destination, cancellationToken);
+            await exporter.ExportAsync(new OdbExportSession(_modelBuilder, _identities, _sets, entityTypes), destination, cancellationToken);
         }
 
         protected OdbSet<TEntity, TKey> GetSet<TEntity, TKey>()
@@ -87,7 +89,7 @@ namespace oojjrs.odb
 
             cancellationToken.ThrowIfCancellationRequested();
             EnsureModelInitialized();
-            await importer.ImportAsync(new OdbImportSession(_modelBuilder, _sets), source, cancellationToken);
+            await importer.ImportAsync(new OdbImportSession(_modelBuilder, _identities, _sets), source, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
         }
 
@@ -103,7 +105,9 @@ namespace oojjrs.odb
             EnsureModelInitialized();
             foreach (var entityBuilder in _modelBuilder.EntityBuilders)
                 entityBuilder.ResetSet(_sets[entityBuilder.EntityType]);
-            await importer.ImportAsync(new OdbImportSession(_modelBuilder, _sets), source, cancellationToken);
+            foreach (var identity in _identities.Values)
+                identity.Reset();
+            await importer.ImportAsync(new OdbImportSession(_modelBuilder, _identities, _sets), source, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
         }
 
