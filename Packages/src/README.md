@@ -34,6 +34,7 @@ public sealed class GameDatabase : OdbContext
 - `TryFindBy`는 unique index를 조회한다.
 - `FindBy`는 non-unique index 결과를 allocation 없는 view로 반환한다.
 - `Add`, `TryAdd`, `Replace`, `TryReplace`, `Remove`는 등록된 모든 인덱스를 함께 갱신한다.
+- `Try...` 계열은 조회 실패와 키 충돌처럼 예상된 실패를 `false`로 반환하며, 잘못된 인자·인덱스 사용이나 key selector/comparer에서 발생한 예외는 숨기지 않는다.
 
 ## 비동기 스냅샷
 

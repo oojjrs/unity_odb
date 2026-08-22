@@ -34,30 +34,21 @@ namespace oojjrs.odb
 
         bool OdbIndexRuntimeInterface<TEntity, TKey>.CanAdd(TEntity entity)
         {
-            try
-            {
-                return EntitiesByIndexKey.ContainsKey(GetIndexKey(entity)) == false;
-            }
-            catch
-            {
+            if (TryGetIndexKey(entity, out var indexKey) == false)
                 return false;
-            }
+
+            return EntitiesByIndexKey.ContainsKey(indexKey) == false;
         }
 
         bool OdbIndexRuntimeInterface<TEntity, TKey>.CanReplace(TEntity previous, TEntity replacement)
         {
-            try
-            {
-                GetIndexKey(previous);
-                if (EntitiesByIndexKey.TryGetValue(GetIndexKey(replacement), out var indexedEntity) == false)
-                    return true;
-
-                return ReferenceEquals(indexedEntity, previous);
-            }
-            catch
-            {
+            if ((TryGetIndexKey(previous, out _) == false) || (TryGetIndexKey(replacement, out var replacementIndexKey) == false))
                 return false;
-            }
+
+            if (EntitiesByIndexKey.TryGetValue(replacementIndexKey, out var indexedEntity) == false)
+                return true;
+
+            return ReferenceEquals(indexedEntity, previous);
         }
 
         void OdbIndexRuntimeInterface<TEntity, TKey>.Clear()
@@ -99,9 +90,10 @@ namespace oojjrs.odb
 
         private TIndexKey GetIndexKey(TEntity entity)
         {
-            var indexKey = Definition.KeySelector(entity);
-            ValidateIndexKey(indexKey);
-            return indexKey;
+            if (TryGetIndexKey(entity, out var indexKey))
+                return indexKey;
+
+            throw new InvalidOperationException("An index selector returned a null key.");
         }
 
         private void RemoveEntity(TIndexKey indexKey, TEntity entity)
@@ -110,6 +102,12 @@ namespace oojjrs.odb
                 || (ReferenceEquals(indexedEntity, entity) == false)
                 || (EntitiesByIndexKey.Remove(indexKey) == false))
                 throw new InvalidOperationException($"The unique index '{Definition.Name}' does not contain the primary key.");
+        }
+
+        private bool TryGetIndexKey(TEntity entity, out TIndexKey indexKey)
+        {
+            indexKey = Definition.KeySelector(entity);
+            return indexKey is not null;
         }
 
         public bool TryFind(TIndexKey indexKey, out TEntity entity)

@@ -34,29 +34,15 @@ namespace oojjrs.odb
 
         bool OdbIndexRuntimeInterface<TEntity, TKey>.CanAdd(TEntity entity)
         {
-            try
-            {
-                GetIndexKey(entity);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
+            return TryGetIndexKey(entity, out _);
         }
 
         bool OdbIndexRuntimeInterface<TEntity, TKey>.CanReplace(TEntity previous, TEntity replacement)
         {
-            try
-            {
-                GetIndexKey(previous);
-                GetIndexKey(replacement);
-                return true;
-            }
-            catch
-            {
+            if ((TryGetIndexKey(previous, out _) == false) || (TryGetIndexKey(replacement, out _) == false))
                 return false;
-            }
+
+            return true;
         }
 
         void OdbIndexRuntimeInterface<TEntity, TKey>.Clear()
@@ -133,15 +119,22 @@ namespace oojjrs.odb
 
         private TIndexKey GetIndexKey(TEntity entity)
         {
-            var indexKey = Definition.KeySelector(entity);
-            ValidateIndexKey(indexKey);
-            return indexKey;
+            if (TryGetIndexKey(entity, out var indexKey))
+                return indexKey;
+
+            throw new InvalidOperationException("An index selector returned a null key.");
         }
 
         private void RemovePrimaryKey(TIndexKey indexKey, TKey primaryKey)
         {
             if ((PrimaryKeysByIndexKey.TryGetValue(indexKey, out var primaryKeys) == false) || (primaryKeys.Remove(primaryKey) == false))
                 throw new InvalidOperationException($"The hash index '{Definition.Name}' does not contain the primary key.");
+        }
+
+        private bool TryGetIndexKey(TEntity entity, out TIndexKey indexKey)
+        {
+            indexKey = Definition.KeySelector(entity);
+            return indexKey is not null;
         }
     }
 }
