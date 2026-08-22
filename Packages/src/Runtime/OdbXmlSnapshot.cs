@@ -98,6 +98,35 @@ namespace oojjrs.odb
             return serializer;
         }
 
+        private static void ImportEntityRows(OdbImportSession session, XmlReader reader, OdbEntityBuilderInterface entityBuilder, CancellationToken cancellationToken)
+        {
+            var entityIsEmpty = reader.IsEmptyElement;
+            reader.ReadStartElement("entity");
+            if (entityIsEmpty)
+                return;
+
+            var serializer = GetSerializer(entityBuilder.EntityType);
+            while (reader.MoveToContent() == XmlNodeType.Element)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (serializer.CanDeserialize(reader) == false)
+                    throw new InvalidDataException($"Entity '{entityBuilder.Name}' contains an unexpected '{reader.Name}' element.");
+
+                var entity = serializer.Deserialize(reader);
+                if (entity == null)
+                    throw new InvalidDataException($"Entity '{entityBuilder.Name}' contains a null row.");
+
+                if (session.TryAdd(entityBuilder, entity) == false)
+                    throw new InvalidDataException($"Entity '{entityBuilder.Name}' contains a duplicate primary or unique key.");
+            }
+
+            if ((reader.NodeType != XmlNodeType.EndElement) || (reader.LocalName != "entity") || (reader.NamespaceURI.Length != 0))
+                throw new InvalidDataException($"Entity '{entityBuilder.Name}' is invalid.");
+
+            reader.ReadEndElement();
+        }
+
         internal static async Task ImportAsync(OdbImportSession session, Stream source, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -125,45 +154,22 @@ namespace oojjrs.odb
 
                     var snapshotIsEmpty = reader.IsEmptyElement;
                     reader.ReadStartElement("odbSnapshot");
-                    foreach (var entityBuilder in session.EntityBuilders)
+                    if (snapshotIsEmpty == false)
                     {
-                        cancellationToken.ThrowIfCancellationRequested();
-
-                        if (snapshotIsEmpty)
-                            throw new InvalidDataException("The XML snapshot does not contain every registered entity.");
-
-                        if (reader.MoveToContent() != XmlNodeType.Element || reader.IsStartElement("entity") == false)
-                            throw new InvalidDataException($"The XML snapshot does not contain entity '{entityBuilder.Name}'.");
-
-                        var entityName = GetRequiredAttribute(reader, "name");
-                        if (entityName != entityBuilder.Name)
-                            throw new InvalidDataException($"Expected entity '{entityBuilder.Name}' but found '{entityName}'.");
-
-                        var entityIsEmpty = reader.IsEmptyElement;
-                        reader.ReadStartElement("entity");
-                        if (entityIsEmpty)
-                            continue;
-
-                        var serializer = GetSerializer(entityBuilder.EntityType);
-                        while (reader.MoveToContent() == XmlNodeType.Element)
+                        var importedEntityNames = new HashSet<string>(StringComparer.Ordinal);
+                        while ((reader.MoveToContent() == XmlNodeType.Element) && reader.IsStartElement("entity"))
                         {
                             cancellationToken.ThrowIfCancellationRequested();
 
-                            if (serializer.CanDeserialize(reader) == false)
-                                throw new InvalidDataException($"Entity '{entityBuilder.Name}' contains an unexpected '{reader.Name}' element.");
+                            var entityName = GetRequiredAttribute(reader, "name");
+                            if (importedEntityNames.Add(entityName) == false)
+                                throw new InvalidDataException($"The XML snapshot contains entity '{entityName}' more than once.");
 
-                            var entity = serializer.Deserialize(reader);
-                            if (entity == null)
-                                throw new InvalidDataException($"Entity '{entityBuilder.Name}' contains a null row.");
+                            if (session.TryGetEntityBuilder(entityName, out var entityBuilder) == false)
+                                throw new InvalidDataException($"The entity '{entityName}' is not registered in this import session.");
 
-                            if (session.TryAdd(entityBuilder, entity) == false)
-                                throw new InvalidDataException($"Entity '{entityBuilder.Name}' contains a duplicate primary or unique key.");
+                            ImportEntityRows(session, reader, entityBuilder, cancellationToken);
                         }
-
-                        if ((reader.NodeType != XmlNodeType.EndElement) || (reader.LocalName != "entity") || (reader.NamespaceURI.Length != 0))
-                            throw new InvalidDataException($"Entity '{entityBuilder.Name}' is invalid.");
-
-                        reader.ReadEndElement();
                     }
 
                     if (snapshotIsEmpty == false)

@@ -35,7 +35,20 @@ namespace oojjrs.odb
             }
         }
 
-        public async Task ExportAsync(Stream destination, OdbExporterInterface exporter, CancellationToken cancellationToken = default)
+        public Task ExportAsync(Stream destination, OdbExporterInterface exporter, CancellationToken cancellationToken = default)
+        {
+            return ExportCoreAsync(destination, exporter, null, cancellationToken);
+        }
+
+        public Task ExportAsync(Stream destination, OdbExporterInterface exporter, CancellationToken cancellationToken, params Type[] entityTypes)
+        {
+            if (entityTypes == null)
+                throw new ArgumentNullException(nameof(entityTypes));
+
+            return ExportCoreAsync(destination, exporter, entityTypes, cancellationToken);
+        }
+
+        private async Task ExportCoreAsync(Stream destination, OdbExporterInterface exporter, IReadOnlyCollection<Type> entityTypes, CancellationToken cancellationToken)
         {
             if (destination == null)
                 throw new ArgumentNullException(nameof(destination));
@@ -45,7 +58,7 @@ namespace oojjrs.odb
 
             cancellationToken.ThrowIfCancellationRequested();
             EnsureModelInitialized();
-            await exporter.ExportAsync(new OdbExportSession(_modelBuilder, _sets), destination, cancellationToken);
+            await exporter.ExportAsync(new OdbExportSession(_modelBuilder, _sets, entityTypes), destination, cancellationToken);
         }
 
         protected OdbSet<TEntity, TKey> GetSet<TEntity, TKey>()
@@ -62,6 +75,20 @@ namespace oojjrs.odb
                 return set;
 
             throw new InvalidOperationException($"The entity '{entityType.FullName}' was requested with a different primary key type.");
+        }
+
+        public async Task ImportAsync(Stream source, OdbImporterInterface importer, CancellationToken cancellationToken = default)
+        {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+
+            if (importer == null)
+                throw new ArgumentNullException(nameof(importer));
+
+            cancellationToken.ThrowIfCancellationRequested();
+            EnsureModelInitialized();
+            await importer.ImportAsync(new OdbImportSession(_modelBuilder, _sets), source, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
         }
 
         public async Task InitializeAsync(Stream source, OdbImporterInterface importer, CancellationToken cancellationToken = default)

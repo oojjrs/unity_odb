@@ -71,6 +71,31 @@ namespace oojjrs.odb
             return serializer;
         }
 
+        private static void ImportEntityRows(OdbImportSession session, XmlReader reader, OdbEntityBuilderInterface entityBuilder, CancellationToken cancellationToken)
+        {
+            var rowsAreEmpty = reader.IsEmptyElement;
+            reader.ReadStartElement("rows");
+            if (rowsAreEmpty == false)
+            {
+                var serializer = GetSerializer(entityBuilder.EntityType);
+                while (reader.IsStartElement("item"))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    var entity = serializer.ReadObject(reader, true);
+                    if (entity == null)
+                        throw new InvalidDataException($"Entity '{entityBuilder.Name}' contains a null row.");
+
+                    if (session.TryAdd(entityBuilder, entity) == false)
+                        throw new InvalidDataException($"Entity '{entityBuilder.Name}' contains a duplicate primary or unique key.");
+                }
+
+                reader.ReadEndElement();
+            }
+
+            reader.ReadEndElement();
+        }
+
         internal static async Task ImportAsync(OdbImportSession session, Stream source, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -91,35 +116,29 @@ namespace oojjrs.odb
                         throw new InvalidDataException(
                             $"The JSON snapshot schema version '{schemaVersion}' does not match model schema version '{session.ModelSchemaVersion}'.");
 
+                    var entitiesAreEmpty = reader.IsEmptyElement;
                     reader.ReadStartElement("entities");
-                    foreach (var entityBuilder in session.EntityBuilders)
+                    if (entitiesAreEmpty == false)
                     {
-                        cancellationToken.ThrowIfCancellationRequested();
-
-                        reader.ReadStartElement("item");
-                        var entityName = reader.ReadElementContentAsString("name", string.Empty);
-                        if (entityName != entityBuilder.Name)
-                            throw new InvalidDataException($"Expected entity '{entityBuilder.Name}' but found '{entityName}'.");
-
-                        reader.ReadStartElement("rows");
-                        var serializer = GetSerializer(entityBuilder.EntityType);
+                        var importedEntityNames = new HashSet<string>(StringComparer.Ordinal);
                         while (reader.IsStartElement("item"))
                         {
                             cancellationToken.ThrowIfCancellationRequested();
 
-                            var entity = serializer.ReadObject(reader, true);
-                            if (entity == null)
-                                throw new InvalidDataException($"Entity '{entityBuilder.Name}' contains a null row.");
+                            reader.ReadStartElement("item");
+                            var entityName = reader.ReadElementContentAsString("name", string.Empty);
+                            if (importedEntityNames.Add(entityName) == false)
+                                throw new InvalidDataException($"The JSON snapshot contains entity '{entityName}' more than once.");
 
-                            if (session.TryAdd(entityBuilder, entity) == false)
-                                throw new InvalidDataException($"Entity '{entityBuilder.Name}' contains a duplicate primary or unique key.");
+                            if (session.TryGetEntityBuilder(entityName, out var entityBuilder) == false)
+                                throw new InvalidDataException($"The entity '{entityName}' is not registered in this import session.");
+
+                            ImportEntityRows(session, reader, entityBuilder, cancellationToken);
                         }
-
-                        reader.ReadEndElement();
-                        reader.ReadEndElement();
                     }
 
-                    reader.ReadEndElement();
+                    if (entitiesAreEmpty == false)
+                        reader.ReadEndElement();
                     reader.ReadEndElement();
                 }
             }

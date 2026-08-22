@@ -24,6 +24,21 @@ namespace oojjrs.odb
             return entityBuilder.TryAdd(SetsByType[entityBuilder.EntityType], entity);
         }
 
+        internal bool TryGetEntityBuilder(string entityName, out OdbEntityBuilderInterface entityBuilder)
+        {
+            foreach (var candidate in EntityBuilders)
+            {
+                if (candidate.Name != entityName)
+                    continue;
+
+                entityBuilder = candidate;
+                return true;
+            }
+
+            entityBuilder = null;
+            return false;
+        }
+
         public bool TryAdd<TEntity>(TEntity entity)
             where TEntity : class
         {
