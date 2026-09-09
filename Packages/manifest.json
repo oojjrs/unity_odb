@@ -1,6 +1,9 @@
 {
   "dependencies": {
     "com.oojjrs.odb": "file:src",
-    "com.unity.ide.visualstudio": "2.0.27"
+    "com.unity.ide.visualstudio": "2.0.27",
+    "com.unity.modules.physicscore2d": "1.0.0",
+    "com.unity.modules.tetgen": "1.0.0",
+    "com.unity.modules.timelinefoundation": "1.0.0"
   }
 }
